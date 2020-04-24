@@ -6,6 +6,7 @@ import (
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 
 // OpenTelemetry is the schema for the OpenTelemetry Operator API
 // +k8s:openapi-gen=true
@@ -18,15 +19,23 @@ type OpenTelemetry struct {
 	Status OpenTelemetryStatus `json:"status"`
 }
 
-// OpenTelemetrySpec defines the desired state of KubeDescheduler
+// OpenTelemetrySpec defines the desired state of OpenTelemetry Collector
 type OpenTelemetrySpec struct {
 	operatorv1.OperatorSpec `json:",inline"`
 
-	Image  string `json:"image,omitempty"`
-	Config string `json:"config"`
+	Image   string        `json:"image,omitempty"`
+	Config  string        `json:"config"`
+	Service []OtelService `json:"service"`
 }
 
-// OpenTelemetryStatus defines the observed state of KubeDescheduler
+// OtelService defines a port and targetport pair for the Collector service
+type OtelService struct {
+	Name       string `json:"name"`
+	Port       int    `json:"port"`
+	TargetPort int    `json:"targetPort""`
+}
+
+// OpenTelemetryStatus defines the observed state of OpenTelemetry Collector
 type OpenTelemetryStatus struct {
 	operatorv1.OperatorStatus `json:",inline"`
 }

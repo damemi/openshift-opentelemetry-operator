@@ -11,6 +11,8 @@ Its basic function is to manage:
 
 `oc create -f manifests/.`
 
+[See a detailed example here](docs/example.md)
+
 ### Configuring
 
 Provide a custom resource such as:
@@ -28,10 +30,10 @@ spec:
       targetPort: 14250
   config: |
     receivers:
-    jaeger:
-      protocols:
-        grpc:
-          endpoint: <JAEGER ENDPOINT>
+      jaeger:
+        protocols:
+          grpc:
+            endpoint: <JAEGER ENDPOINT>
     processors:
       queued_retry:
     

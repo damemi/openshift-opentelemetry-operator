@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "opentelemetry-collector"
+  namespace: "opentelemetry-operator"
+  labels:
+    app: "otel-collector"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "otel-collector"
+  template:
+    metadata:
+      labels:
+        app: "otel-collector"
+    spec:
+      volumes:
+        - name: "otel-config"
+          configMap:
+            name: "opentelemetry-config"
+      priorityClassName: "system-cluster-critical"
+      restartPolicy: "Always"
+      containers:
+        - name: "opentelemetry-collector"
+          image: "quay.io/opentelemetry/opentelemetry-collector:v0.2.0"
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "500Mi"
+            requests:
+              cpu: "100m"
+              memory: "500Mi"
+          args:
+            - --config=/conf/conf.yaml
+          volumeMounts:
+            - mountPath: "/conf"
+              name: "otel-config"
+      serviceAccountName: "opentelemetry-operator"

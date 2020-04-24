@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-operator
+  namespace: opentelemetry-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: opentelemetry-operator
+  template:
+    metadata:
+      labels:
+        name: opentelemetry-operator
+    spec:
+      containers:
+        - name: opentelemetry-operator
+          image: quay.io/mdame/opentelemetry-operator:latest
+          ports:
+          - containerPort: 60000
+            name: metrics
+          command: ["opentelemetry-operator", "run"]
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: OPERATOR_NAME
+              value: "opentelemetry-operator"
+      serviceAccountName: opentelemetry-operator

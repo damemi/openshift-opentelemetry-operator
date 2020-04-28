@@ -58,33 +58,43 @@ metadata:
   name: collector
   namespace: opentelemetry-operator
 spec:
-  image: "quay.io/opentelemetry/opentelemetry-collector:v0.2.0"
+  image: "docker.io/otel/opentelemetry-collector:0.3.0"
   service:
     - name: jaeger-grpc
       port: 14250
       targetPort: 14250
+    - name: otlp
+      port: 9090
+      targetPort: 9090
+    - name: jaeger-http
+      port: 14268
+      targetPort: 14268
   config: |
     receivers:
       jaeger:
         protocols:
-          grpc:
+          thrift_http:
+            endpoint: ":14268"
+
     processors:
       queued_retry:
-    
+
     exporters:
-      jaeger_grpc:
-        endpoint: jaeger-all-in-one-inmemory-collector:14250
-    
+      logging:
+        loglevel: info
+      jaeger_thrift_http:
+        url: "http://jaeger-all-in-one-inmemory-collector.jaeger:14268/api/traces"
+
     service:
       pipelines:
         traces:
           receivers: [jaeger]
           processors: [queued_retry]
-          exporters: [jaeger_grpc]
+          exporters: [logging,jaeger_thrift_http]
 ```
 
-**NOTE:** The `endpoint` param under the `jaeger_grpc` exporter refers to the collector service created by the
-Jaeger operator in the above step, serving on its default gRPC port.
+**NOTE:** The `url` param under the `jaeger_thrift_http` exporter refers to the collector service created by the
+Jaeger operator in the above step, serving on its default http port.
 
 If your config works correctly, you should see the below in the operator namespace:
 
@@ -110,13 +120,12 @@ replicaset.apps/opentelemetry-operator-789d7879bc    1         1         1      
 
 All of this is useless unless something is actually exporting OTLP (OpenTelemetry Collector)-compatible traces.
 
-For this example, I've re-built the [Kube Scheduler Operator](https://github.com/damemi/cluster-kube-scheduler-operator/tree/otlp-tracing-example)
-with some simple spans in its TargetConfigReconciler. (The interesting code changes are in [pkg/operator/starter.go](https://github.com/damemi/cluster-kube-scheduler-operator/commit/96e7f122b1ff9500e9171cb38c12498b6ecbc154#diff-ef02f4dd56d4bd19d7b3e4913b9a57d5)
-and [pkg/operator/target_config_reconciler_v410_00.go](https://github.com/damemi/cluster-kube-scheduler-operator/commit/96e7f122b1ff9500e9171cb38c12498b6ecbc154#diff-a4804ecbda2ebac05da3f9471e6aa96e))
+For this example, I've re-built the [Kube Scheduler Operator](https://github.com/damemi/cluster-kube-scheduler-operator/tree/jaeger-demo)
+with some simple spans (and a Jaeger exporter) in its startup, using a trace wrapper I've provided in [library-go](https://github.com/damemi/library-go/tree/tracing-helpers).
 
 To run this yourself, scale down the CVO so you can edit the scheduler operator's image.
 
-Then, you can either build your own image from my fork or use the example `quay.io/mdame/kso-tracing-example`.
+Then, you can either build your own image from my fork or use the example `quay.io/mdame/kso-jaeger-demo`.
 Edit the scheduler operator deployment (`oc edit deployment.apps/openshift-kube-scheduler-operator -n openshift-kube-scheduler-operator`)
 to include the following in the pod template spec:
 
@@ -125,10 +134,10 @@ to include the following in the pod template spec:
 spec:
   containers:
     env:
-    - name: OTLP_ENDPOINT
-      value: otel-collector.opentelemetry-operator:14250
+    - name: JAEGER_ENDPOINT
+      value: http://otel-collector.opentelemetry-operator:14268/api/traces
     ...
-    image: quay.io/mdame/kso-tracing-example
+    image: quay.io/mdame/kso-jaeger-demo
     ...
 ...
 ```

@@ -150,3 +150,30 @@ After editing this you should see a new kube-scheduler-operator pod deploy, and 
 Clicking on a trace shows a detailed breakdown of each span within it:
 
 ![trace](trace.png)
+
+### Extra Credit
+
+To show more traces within kube components, I've also built a custom scheduler image, and a copy of kube-scheduler-operator
+updated to use that image. This will show traces for a service `kube-scheduler` showing scheduler startup, and the scheduling
+process for new pods.
+
+To try this out with the above setup, use the `quay.io/mdame/kso-custom-tracing` image in your kube-scheduler-operator deployment.
+Note that this will also require specifying the custom scheduler image name (`quay.io/mdame/custom-kube-scheduler-tracing`) and that
+the Jaeger url needs to refer to the service IP, not just its name, or be exposed via a route. (This is because the static kube-scheduler
+pods do not use the same cluster DNS as the operator pods).
+
+Operator Deployment:
+```
+spec:
+  containers:
+    env:
+    - name: JAEGER_ENDPOINT
+      value: http://172.30.12.75:14268/api/traces
+    - name: SCHEDULER_IMAGE
+      value: quay.io/mdame/custom-kube-scheduler-tracing
+    ...
+    image: quay.io/mdame/kso-custom-tracing
+```
+
+With this change, once your kube-schedulers redeploy you'll be able to see traces when you schedule new pods that look like this:
+![scheduler](https://user-images.githubusercontent.com/1839101/80658308-cc233700-8a53-11ea-92ca-a1edd4bfc40e.png)
